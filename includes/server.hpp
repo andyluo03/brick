@@ -1,6 +1,14 @@
+#ifndef B_SERVER
+#define B_SERVER
+
 #include <thread>
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <functional>
+
+#include "response.hpp"
+#include "request.hpp"
 
 namespace brick {
 
@@ -9,11 +17,20 @@ class Server {
   Server() = default;
   ~Server();
   
-  Server& route(const std::string& path, std::function<std::string(std::string)> method);
-  void start(int socket);
+  void route(const std::string& path, std::function<Response(Request)> method);
+  void start(int port);
+  void build_pool(int threads);
 
  private:
-  std::unordered_map<std::string, std::function<std::string(std::string)>> router_;
+  //thread-safe on read...
+  static constexpr unsigned int kMaxConnections = 100;
+
+  std::unordered_map<std::string, std::function<Response(Request)>> router_;
   std::vector<std::thread> pool_;
+  int socket_fd_;
+  int port_;
+  int epoll_fd_;
 };
 }
+
+#endif
