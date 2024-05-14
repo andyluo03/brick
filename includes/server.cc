@@ -22,6 +22,7 @@ namespace brick {
 
   
   void Server::start(int port = 8080){
+    // Make a function for this population...
     port_ = port;
 
     socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -60,60 +61,21 @@ namespace brick {
       std::cerr << "Epoll failed." << std::endl;
       exit(1);
     }
-    
-    struct epoll_event events[kMaxConnections]; //dont want to keep reallocating!
 
-
-    start_handler(socket_fd_, epoll_fd_, address);
-    /**
-    while(true){
-      int event_size = epoll_wait(epoll_fd_, events, kMaxConnections, -1);
-
-      for(int i = 0; i < event_size; i++){
-        socklen_t stupid = sizeof(address);
-        int client_fd = //accept( socket_fd_, reinterpret_cast<sockaddr*>(&address), &stupid);
-          events[0].data.fd; //<< " " << std::endl;
-
-        accept( socket_fd_, reinterpret_cast<sockaddr*>(&address), &stupid);
-
-        //std::cout << 
-
-        std::cout << client_fd << " " << socket_fd_ << std::endl;
-        char buffer[1000];
-        int sz = read(events[0].data.fd, buffer, 999);
-
-        std::string asd;
-        for(int i = 0; i < sz; i++){
-          asd+=buffer[i];
-        }
-
-        Request a(asd);
-
-        std::cout << a.body() << "!" << std::endl;
-        Response resp;
-        resp.set_body(a.body());
-
-        std::string fff = resp.build();
-        const char* ex = fff.c_str();
-        write(client_fd, ex, sizeof(char) * fff.size());
-        std::cout << buffer << std::endl;
-        close(client_fd);
-      }
-    }
-    **/
-    
+    //populate pool!
+    for(int i = 0; i < std::min(1U, std::thread::hardware_concurrency()); i++){
+      pool_.emplace_back(start_handler, socket_fd_, epoll_fd_, address, router_);
+    } 
   }
 
   Server::~Server(){
-    std::cout << "Closing threads." << std::endl;
     for(std::thread& thread : pool_){
       thread.join();
     }
-
-    std::cout << "Closing sockets." << std::endl;
+    std::cout << "Successfully closed threads." << std::endl;
+    
     close(socket_fd_);
     close(epoll_fd_);
-
-    std::cout << "Successful shutdown." << std::endl;
+    std::cout << "Successfully shutdown file descriptors." << std::endl;
   }
 }

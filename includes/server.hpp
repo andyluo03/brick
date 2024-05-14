@@ -23,7 +23,7 @@ class Server {
 
  private:
   //thread-safe on read...
-  static constexpr unsigned int kMaxConnections = 100;
+  static constexpr unsigned int kMaxConnections = 10000;
 
   std::unordered_map<std::string, std::function<Response(Request)>> router_;
   std::vector<std::thread> pool_;

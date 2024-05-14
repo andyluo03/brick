@@ -8,16 +8,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-void brick::start_handler(int port_fd, int epoll_fd, sockaddr_in& address){
+void brick::start_handler(int port_fd, int epoll_fd, sockaddr_in address, const std::unordered_map<std::string, std::function<Response(Request)>>& router){
     socklen_t addr_size = sizeof(address);
     while(true){
         struct epoll_event client[10];
         std::cout << epoll_wait(epoll_fd, client, 10, -1);
-        
         struct epoll_event a;
-
         int relevant_fd = client[0].data.fd;
-        //accept(epoll_fd, reinterpret_cast<sockaddr*>(&address), &addr_size);
         
         if(client[0].data.fd == port_fd){
             std::cerr << "new connection!" << std::endl;
@@ -33,18 +30,16 @@ void brick::start_handler(int port_fd, int epoll_fd, sockaddr_in& address){
             }
         }else{
             std::cerr << "answering connection!" << std::endl;
-            char buf[1000];
-            int size = read(relevant_fd, buf, 999);
+            char buf[10000];
+            int size = read(relevant_fd, buf, 9999);
             buf[size] = '\0';
 
-            Response t;
-            t.set_body(std::string(buf));
-            std::cerr << t.build() << std::endl;
+            Request incoming_request(buf);
+            Response response = router.at(std::string(incoming_request.route()))(incoming_request);
 
-            write(relevant_fd, t.build().c_str(), t.build().size());
-
+            std::string ans = response.build();
+            write(relevant_fd, ans.c_str(), ans.size());
             epoll_ctl(epoll_fd, EPOLL_CTL_DEL, relevant_fd, &a);
-
             close(relevant_fd);
         }
     }
