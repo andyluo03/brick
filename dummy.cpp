@@ -1,21 +1,16 @@
 #include <functional>
-#include <vector>
 #include <thread>
+#include <vector>
 
 struct Foo {
     Foo() = default;
     std::vector<std::thread> a;
 
-    ~Foo(){
-        for(auto& f : a){
+    ~Foo() {
+        for (auto& f : a) {
             f.join();
         }
     }
 };
 
-
-
-int main () {
-    Foo bar;
-
-}
+int main() { Foo bar; }

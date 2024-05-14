@@ -1,13 +1,13 @@
 #ifndef B_REQUEST
 #define B_REQUEST
 
-#include <string>
 #include <map>
+#include <string>
 #include <string_view>
 
 namespace brick {
 class Request {
-    public:
+   public:
     Request() = delete;
 
     // DO NOT EXPOSE THIS TO THE USER.
@@ -22,7 +22,7 @@ class Request {
 
     ~Request() = default;
 
-    private:
+   private:
     std::string request_;
     unsigned int size_;
 
@@ -32,6 +32,6 @@ class Request {
     std::string_view body_;
     std::map<std::string, std::string_view> headers_;
 };
-}
+}  // namespace brick
 
 #endif
