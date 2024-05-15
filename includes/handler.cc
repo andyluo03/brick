@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "response.hpp"
+#include "logger.hpp"
 
 void brick::start_handler(
     int port_fd, int epoll_fd, sockaddr_in address,
@@ -16,12 +17,14 @@ void brick::start_handler(
     socklen_t addr_size = sizeof(address);
     while (true) {
         struct epoll_event client[10];
-        std::cout << epoll_wait(epoll_fd, client, 10, -1);
+        int nfds = epoll_wait(epoll_fd, client, 10, -1);
+        log::info("Number of events: ", nfds);
         struct epoll_event a;
         int relevant_fd = client[0].data.fd;
 
         if (client[0].data.fd == port_fd) {
-            std::cerr << "new connection!" << std::endl;
+            log::info("new connection!");
+
             a.events = EPOLLIN;
 
             int new_fd = accept(port_fd, reinterpret_cast<sockaddr*>(&address),
@@ -30,11 +33,11 @@ void brick::start_handler(
             a.data.fd = new_fd;
             a.events = EPOLLIN | EPOLLET;
             if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &a) < 0) {
-                std::cerr << "bad " << new_fd;
+                log::error("epoll_ctl failed!");
                 exit(1);
             }
         } else {
-            std::cerr << "answering connection!" << std::endl;
+            log::info("answering connection!");
             char buf[10000];
             int size = read(relevant_fd, buf, 9999);
             buf[size] = '\0';
