@@ -4,6 +4,7 @@ set(SOURCE_FILES
         includes/request.cc
         includes/response.cc
         includes/server.cc
+        utils/logger.cc
     )
 
 cmake_minimum_required(VERSION 3.28.2)
@@ -16,7 +17,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(potion-example example.cpp ${SOURCE_FILES})
 
 # add include directories
-target_include_directories(potion-example PRIVATE includes)
+target_include_directories(potion-example PRIVATE includes PRIVATE utils)
 
 # add compile flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
