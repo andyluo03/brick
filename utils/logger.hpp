@@ -99,10 +99,11 @@ void log_message(const std::string& level_str,
     std::cerr << std::left << std::setw(20) << level_str << " ";
 
     // print source location
-    std::cerr << std::left << std::setw(40)
-              << "[\033[36m" + relative_path(location.file_name()) + ":" +
-                     std::to_string(location.line()) + "\033[0m] ";
-
+    std::cerr << std::right << std::setw(35)
+              << "\033[36m" + relative_path(location.file_name()) + ":" +
+                     std::to_string(location.line()) + "\033[0m";
+    
+    std::cerr << " -- ";
     // log the arguments
     log_args(std::forward<Types>(args)...);
 
