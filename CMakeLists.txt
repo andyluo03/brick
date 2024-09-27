@@ -11,6 +11,9 @@ cmake_minimum_required(VERSION 3.28.2)
 project(potion)
 set(CMAKE_CXX_STANDARD 20)
 
+# set compiler to be clang
+set(CMAKE_CXX_COMPILER clang++)
+
 # create compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
