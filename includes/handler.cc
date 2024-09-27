@@ -24,16 +24,13 @@ void brick::start_handler(
 
         if (client[0].data.fd == port_fd) {
             log::info("new connection!");
-
-            a.events = EPOLLIN;
-
             int new_fd = accept(port_fd, reinterpret_cast<sockaddr*>(&address),
                                 &addr_size);
 
             a.data.fd = new_fd;
             a.events = EPOLLIN | EPOLLET;
             if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &a) < 0) {
-                log::error("epoll_ctl failed!");
+                log::fatal("epoll_ctl failed!");
                 exit(1);
             }
         } else {

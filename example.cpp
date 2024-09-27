@@ -1,5 +1,6 @@
 #include "includes/handler.hpp"
 #include "includes/server.hpp"
+#include "utils/logger.hpp"
 
 brick::Response mirror_body(brick::Request a) {
     brick::Response t(200);
@@ -15,7 +16,9 @@ brick::Response hello_world(brick::Request a) {
 }
 
 int main() {
-    auto a = brick::Server();
+    brick::log::set_level(brick::log::level::kDebug);
+    brick::log::debug("Set log level to debug");
+    auto a = brick::Server(8);
 
     // apparently chaining is actually kinda hard...
     a.route("/mirror", mirror_body);
