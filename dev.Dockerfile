@@ -7,7 +7,7 @@ ENV LANG=C.UTF-8
 
 RUN apt update -y && apt upgrade -y && apt install -y \
   clang clangd gcc g++ gdb curl wget make python3 python3-pip \
-  vim tmux file iproute2 iputils-ping git
+  vim tmux file iproute2 iputils-ping git cmake
 
 # Editor config
 RUN echo "set number\nsyntax on" >> ~/.vimrc && \
