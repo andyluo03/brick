@@ -19,7 +19,7 @@ Content-Length: 36\r\n
 */
 
 // There might be some bugs w/ incorrect requests...
-Request::Request(std::string_view request) : request_(request) {
+Request::Request(const std::string& request) : request_(request) {
     size_ = request.size();
 
     HttpParseState state = kMethod;
@@ -38,8 +38,8 @@ Request::Request(std::string_view request) : request_(request) {
             case kMethod:
                 if (unit == ' ') {
                     state = kUri;
-                    method_ = std::string_view(request).substr(low, i - low);
-                                       
+                    method_ = request.substr(low, i - low);
+
                     low = i + 1;
                     continue;
                 }
@@ -48,7 +48,7 @@ Request::Request(std::string_view request) : request_(request) {
 
             case kUri:
                 if (unit == ' ') {
-                    route_ = std::string_view(request).substr(low, i - low);
+                    route_ = request.substr(low, i - low);
 
                     low = i + 1;
                     state = kHttpType;
@@ -58,10 +58,9 @@ Request::Request(std::string_view request) : request_(request) {
 
             case kHttpType:
                 if (i >= low + 3 && unit == '\n' && request[i - 1] == '\r') {
-                    http_version_ =
-                        std::string_view(request).substr(low, i - 1 - low);
+                    http_version_ = request.substr(low, i - 1 - low);
                     low = i + 1;
-                    i++;
+                    // i++;
                     state = kHeaderName;
                 }
 
@@ -90,8 +89,7 @@ Request::Request(std::string_view request) : request_(request) {
 
             case kHeaderValue:
                 if (i >= low + 1 && unit == '\n' && request[i - 1] == '\r') {
-                    headers_[key_buffer] =
-                        std::string_view(request).substr(low, i - 1 - low);
+                    headers_[key_buffer] = request.substr(low, i - 1 - low);
                     key_buffer = "";
                     state = kHeaderName;
                     low = i + 1;
@@ -101,19 +99,7 @@ Request::Request(std::string_view request) : request_(request) {
         }
     }
 
-    if (low < size_) body_ = std::string_view(request).substr(low, size_ - low);
+    if (low < size_) body_ = request.substr(low, size_ - low);
 }
-
-std::string_view Request::body() { return body_; }
-
-std::string_view Request::header(const std::string& header) {
-    return headers_[header];
-}
-
-std::string_view Request::method() { return method_; }
-
-std::string_view Request::route() { return route_; }
-
-std::string_view Request::http_version() { return http_version_; }
 
 }  // namespace brick

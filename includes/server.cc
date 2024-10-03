@@ -37,7 +37,7 @@ void Server::start(int port = 8080) {
     log::info("Running on port ", port, " with ", pool_.capacity(), " threads");
 
     // populate pool!
-    for (int i = 0; i < pool_.capacity(); i++) {
+    for (size_t i = 0; i < pool_.capacity(); i++) {
         pool_.emplace_back(&Server::process_events, this);
     }
 
@@ -147,7 +147,7 @@ void Server::handle_request(int client_fd) {
                    Response::kStatusMessages.at(response.status_code()));
     }
 
-    std::string ans = response.build();
+    std::string ans = response.raw();
 
     // send response
     if (send(client_fd, ans.c_str(), ans.size(), 0) < 0) {
