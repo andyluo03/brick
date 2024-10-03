@@ -8,13 +8,12 @@ brick::Response mirror_body(const brick::Request& a) {
     return t;
 }
 
-brick::Response hello_world(const brick::Request& a) {
+brick::Response hello_world(const brick::Request&) {
     brick::Response t(200);
     t.set_body("Hello, World!");
     return t;
 }
 
-// example of a useful route
 brick::Response show_request(const brick::Request& a) {
     brick::Response t(200);
     std::string body = "Method: " + a.method() + "\n";
@@ -37,8 +36,8 @@ int main() {
     auto a = brick::Server(8);
 
     // apparently chaining is actually kinda hard...
-    a.route("/mirror", mirror_body);
-    a.route("/", hello_world);
-    a.route("/show", show_request);
+    a.route("/mirror", "POST", mirror_body);
+    a.route("/", "GET", hello_world);
+    a.route("/show", "POST", show_request);
     a.start(3000);
 }
