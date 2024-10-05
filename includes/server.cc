@@ -11,7 +11,7 @@
 #include <functional>
 #include <string>
 #include <thread>
-#include <unordered_map>
+#include <utility>
 
 #include "handler.hpp"
 #include "logger.hpp"
@@ -24,9 +24,9 @@ namespace brick {
 
 // volatile sig_atomic_t serving_ = 1; // NOLINT
 
-void Server::route(const std::string& path,
-                   std::function<Response(Request)> method) {
-    router_[path] = std::move(method);
+void Server::route(const std::string& path, const std::string& method,
+                   Handler handler) {
+    router_[method][path] = std::move(handler);
 }
 
 void Server::start(int port = 8080) {
@@ -37,7 +37,7 @@ void Server::start(int port = 8080) {
     log::info("Running on port ", port, " with ", pool_.capacity(), " threads");
 
     // populate pool!
-    for (int i = 0; i < pool_.capacity(); i++) {
+    for (size_t i = 0; i < pool_.capacity(); i++) {
         pool_.emplace_back(&Server::process_events, this);
     }
 
@@ -133,11 +133,14 @@ void Server::handle_request(int client_fd) {
     Request request(buf);
 
     // build response
-    auto endpoint = std::string(request.route());
+    auto route = request.route();
+    auto method = request.method();
     // Response response = router_.at(endpoint)(incoming_request);
     Response response(404);
-    if (router_.find(endpoint) != router_.end()) {
-        response = router_.at(endpoint)(request);
+
+    if (router_.contains(method) && router_.at(method).contains(route)) {
+        auto handler = router_.at(method).at(route);
+        response = handler(request);
         log::info("\"", request.method(), " ", request.route(), "\" ",
                   response.status_code(), " ",
                   Response::kStatusMessages.at(response.status_code()));
@@ -147,13 +150,11 @@ void Server::handle_request(int client_fd) {
                    Response::kStatusMessages.at(response.status_code()));
     }
 
-    std::string ans = response.build();
+    std::string ans = response.raw();
 
     // send response
     if (send(client_fd, ans.c_str(), ans.size(), 0) < 0) {
         log::error("Failed to send response: ", strerror(errno));
-        remove_client(client_fd);
-        return;
     }
 
     remove_client(client_fd);

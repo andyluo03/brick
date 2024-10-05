@@ -3,8 +3,6 @@
 
 #include <map>
 #include <string>
-#include <string_view>
-#include <unordered_map>
 
 namespace brick {
 
@@ -17,10 +15,10 @@ class Response {
     explicit Response(unsigned int status_code);
 
     /**
-     * @brief Build response string
+     * @brief Build raw response string
      * @return response string
      */
-    std::string build();
+    std::string raw();
 
     /**
      * @brief Set the body of the response
@@ -28,11 +26,11 @@ class Response {
      */
     void set_body(const std::string& body);
 
-    /**
-     * @brief Set the body of the response
-     * @param `body` the body of the response (as a string_view)
-     */
-    void set_body(const std::string_view& body);
+    // /**
+    //  * @brief Set the body of the response
+    //  * @param `body` the body of the response (as a string_view)
+    //  */
+    // void set_body(const std::string_view& body);
 
     /**
      * @brief Set a header in the response
@@ -64,15 +62,15 @@ class Response {
         return headers_.at(key);
     }
 
-     /**
+    /**
      * Map of status codes to status message strings
      */
-    static const std::unordered_map<unsigned int, std::string> kStatusMessages;
+    static const std::map<unsigned int, std::string> kStatusMessages;
 
    private:
     std::string body_;
     unsigned int status_code_;
-    std::map<std::string, std::string> headers_; 
+    std::map<std::string, std::string> headers_;
 };
 
 }  // namespace brick

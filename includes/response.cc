@@ -4,7 +4,7 @@
 
 namespace brick {
 
-const std::unordered_map<unsigned int, std::string> Response::kStatusMessages =
+const std::map<unsigned int, std::string> Response::kStatusMessages =
     {
         // ** 1xx Informational **
         {100, "Continue"},
@@ -93,7 +93,7 @@ Response::Response(unsigned int status_code) : status_code_(status_code) {
     headers_["Content-Length"] = "0";
 }
 
-std::string Response::build() {
+std::string Response::raw() {
     std::ostringstream oss;
     oss << "HTTP/1.1 " << status_code_ << " "
         << kStatusMessages.at(status_code_) << "\r\n";
@@ -110,13 +110,13 @@ void Response::set_body(const std::string& body) {
     headers_["Content-Length"] = std::to_string(body_.size());
 }
 
-void Response::set_body(const std::string_view& body) {
-    body_ = "";
-    for (char i : body) {
-        body_ += i;
-    }
-    headers_["Content-Length"] = std::to_string(body_.size());
-}
+// void Response::set_body(const std::string_view& body) {
+//     body_ = "";
+//     for (char i : body) {
+//         body_ += i;
+//     }
+//     headers_["Content-Length"] = std::to_string(body_.size());
+// }
 
 void Response::set_header(const std::string& key, const std::string& value) {
     headers_[key] = value;
