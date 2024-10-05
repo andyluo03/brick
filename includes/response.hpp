@@ -64,15 +64,15 @@ class Response {
         return headers_.at(key);
     }
 
-   private:
-    std::string body_;
-    unsigned int status_code_;
-    std::map<std::string, std::string> headers_;
-
-    /**
+     /**
      * Map of status codes to status message strings
      */
     static const std::unordered_map<unsigned int, std::string> kStatusMessages;
+
+   private:
+    std::string body_;
+    unsigned int status_code_;
+    std::map<std::string, std::string> headers_; 
 };
 
 }  // namespace brick

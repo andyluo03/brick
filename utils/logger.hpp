@@ -2,6 +2,7 @@
 #ifndef UTILS_LOGGER_HPP
 #define UTILS_LOGGER_HPP
 
+#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <source_location>
@@ -37,30 +38,35 @@
  */
 
 namespace brick::log {
+enum class level { kDebug, kInfo, kWarning, kError, kFatal };
 
-enum class level {
-    kDebug = 0,
-    kInfo = 1,
-    kWarning = 2,
-    kError = 3,
-    kFatal = 4
-};
+/**
+ * @brief Current logging level (default is info) - set using `set_level` (don't
+ * modify directly)
+ */
+extern level current_level;
+
+/**
+ * @brief Mutex to ensure thread-safe logging
+ */
+extern std::mutex log_mutex;
+
+/**
+ * @brief Convert absolute path to relative path (portion of path after
+ * 'brick/')
+ */
+std::string relative_path(const std::string& absolute_path);
+
+namespace {  // NOLINT
+/*
+ * Private functions and variables
+ */
 
 const std::string kDebugStr = "\033[34m[DEBUG]\033[0m";
 const std::string kInfoStr = "\033[32m[INFO]\033[0m";
 const std::string kWarningStr = "\033[33m[WARNING]\033[0m";
 const std::string kErrorStr = "\033[31m[ERROR]\033[0m";
 const std::string kFatalStr = "\033[31m[FATAL]\033[0m";
-
-extern level current_level;
-extern std::mutex log_mutex;
-
-std::string relative_path(const std::string& absolute_path);
-
-/**
- * @brief Sets the current logging level
- */
-void set_level(level l);
 
 /**
  * @brief Base case for variadic logging template
@@ -70,29 +76,66 @@ void log_args() {}
 
 /**
  * @brief Recursive case for variadic logging template
- * @param arg1 - the first argument to log
- * @param args - the rest of the arguments to log
  */
 template <typename T, typename... Types>
-void log_args(T arg1, Types... args) {
-    std::cerr << arg1;
-    log_args(args...);
+void log_args(T&& arg, Types&&... args) {
+    std::cerr << std::forward<T>(arg);
+    log_args(std::forward<Types>(args)...);
 }
 
 /**
- * @brief Logs a message at the debug level
+ * @brief logs a message using a given level string and source location
  * @param args - the arguments to log
+ * @param level_str - the level string to use
+ * @param location - the source location of the log
+ */
+template <typename... Types>
+void log_message(const std::string& level_str,
+                 const std::source_location& location, Types&&... args) {
+    std::lock_guard<std::mutex> lock(log_mutex);
+    std::time_t now =
+        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::cerr << std::put_time(std::localtime(&now), "[%D %T] ");
+    std::cerr << std::left << std::setw(20) << level_str << " ";
+
+    // print source location
+    std::cerr << std::right << std::setw(35)
+              << "\033[36m" + relative_path(location.file_name()) + ":" +
+                     std::to_string(location.line()) + "\033[0m";
+    
+    std::cerr << " -- ";
+    // log the arguments
+    log_args(std::forward<Types>(args)...);
+
+    /*// print source location*/
+    /*std::cerr << "\t [\033[36m" << relative_path(location.file_name()) <<
+     * ":"*/
+    /*          << location.line() << "\033[0m] ";*/
+    std::cerr << std::endl;
+}
+
+}  // namespace
+
+/**
+ * PUBLIC API
+ */
+
+/**
+ * @brief Set the current logging level
+ */
+void set_level(level new_level);
+
+/**
+ * @brief Functor that logs a message at the debug level
+ * @param args - the arguments to log
+ * @example brick::log::debug("This is a debug message", arg2, arg3, ...);
  */
 template <typename... Types>
 struct debug {  // NOLINT
-    explicit debug(Types... args, const std::source_location& location =
+    explicit debug(Types... args, std::source_location location =
                                       std::source_location::current()) {
         if (current_level <= level::kDebug) {
-            std::lock_guard<std::mutex> lock(log_mutex);
-            std::cerr << "[" << relative_path(location.file_name()) << ":"
-                      << location.line() << "] " << kDebugStr << " ";
-            log_args(args...);
-            std::cerr << std::endl;
+            log_message(kDebugStr, location, std::forward<Types>(args)...);
         }
     }
 };
@@ -101,85 +144,77 @@ template <typename... Types>
 debug(Types...) -> debug<Types...>;
 
 /**
- * @brief Logs a message at the info level
+ * @brief Functor that logs a message at the info level
  * @param args - the arguments to log
+ * @example brick::log::info("This is an info message", arg2, arg3, ...);
  */
 template <typename... Types>
 struct info {  // NOLINT
-    explicit info(Types... args, const std::source_location& location =
+    explicit info(Types... args, std::source_location location =
                                      std::source_location::current()) {
         if (current_level <= level::kInfo) {
-            std::lock_guard<std::mutex> lock(log_mutex);
-            std::cerr << "[" << relative_path(location.file_name()) << ":"
-                      << location.line() << "] " << kInfoStr << " ";
-            log_args(args...);
-            std::cerr << std::endl;
+            log_message(kInfoStr, location, std::forward<Types>(args)...);
         }
     }
 };
+
 // deduction guide
 template <typename... Types>
 info(Types...) -> info<Types...>;
 
 /**
- * @brief Logs a message at the warning level
+ * @brief Functor that logs a message at the warning level
  * @param args - the arguments to log
+ * @example brick::log::warning("This is a warning message", arg2, arg3, ...);
  */
 template <typename... Types>
 struct warning {  // NOLINT
-    explicit warning(Types... args, const std::source_location& location =
+    explicit warning(Types... args, std::source_location location =
                                         std::source_location::current()) {
         if (current_level <= level::kWarning) {
-            std::lock_guard<std::mutex> lock(log_mutex);
-            std::cerr << "[" << relative_path(location.file_name()) << ":"
-                      << location.line() << "] " << kWarningStr << " ";
-            log_args(args...);
-            std::cerr << std::endl;
+            log_message(kWarningStr, location, std::forward<Types>(args)...);
         }
     }
 };
+
 // deduction guide
 template <typename... Types>
 warning(Types...) -> warning<Types...>;
 
 /**
- * @brief Logs a message at the error level
+ * @brief Functor that logs a message at the error level
  * @param args - the arguments to log
+ * @example brick::log::error("This is an error message", arg2, arg3, ...);
  */
 template <typename... Types>
 struct error {  // NOLINT
-    explicit error(Types... args, const std::source_location& location =
+    explicit error(Types... args, std::source_location location =
                                       std::source_location::current()) {
         if (current_level <= level::kError) {
-            std::lock_guard<std::mutex> lock(log_mutex);
-            std::cerr << "[" << relative_path(location.file_name()) << ":"
-                      << location.line() << "] " << kErrorStr << " ";
-            log_args(args...);
-            std::cerr << std::endl;
+            log_message(kErrorStr, location, std::forward<Types>(args)...);
         }
     }
 };
+
 // deduction guide
 template <typename... Types>
 error(Types...) -> error<Types...>;
 
 /**
- * @brief Logs a message at the fatal level
+ * @brief Functor that logs a message at the fatal level
  * @param args - the arguments to log
+ * @example brick::log::fatal("This is a fatal message", arg2, arg3, ...);
  */
 template <typename... Types>
 struct fatal {  // NOLINT
-    explicit fatal(Types... args, const std::source_location& location =
+    explicit fatal(Types... args, std::source_location location =
                                       std::source_location::current()) {
         if (current_level <= level::kFatal) {
-            std::lock_guard<std::mutex> lock(log_mutex);
-            std::cerr << "[" << relative_path(location.file_name()) << ":"
-                      << location.line() << "] " << kFatalStr << " ";
-            log_args(args...);
-            std::cerr << std::endl;
+            log_message(kFatalStr, location, std::forward<Types>(args)...);
         }
     }
 };
+
 // deduction guide
 template <typename... Types>
 fatal(Types...) -> fatal<Types...>;

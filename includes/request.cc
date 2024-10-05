@@ -38,7 +38,8 @@ Request::Request(std::string_view request) : request_(request) {
             case kMethod:
                 if (unit == ' ') {
                     state = kUri;
-                    method_ = std::string_view(request).substr(low, 3);
+                    method_ = std::string_view(request).substr(low, i - low);
+                                       
                     low = i + 1;
                     continue;
                 }
