@@ -1,5 +1,4 @@
-#ifndef B_REQUEST
-#define B_REQUEST
+#pragma once
 
 #include <map>
 #include <string>
@@ -79,5 +78,3 @@ class Request {
     std::map<std::string, std::string> headers_;
 };
 }  // namespace brick
-
-#endif

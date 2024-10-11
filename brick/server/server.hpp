@@ -1,5 +1,4 @@
-#ifndef B_SERVER
-#define B_SERVER
+#pragma once
 
 #include <csignal>
 #include <functional>
@@ -7,8 +6,8 @@
 #include <thread>
 #include <vector>
 
-#include "request.hpp"
-#include "response.hpp"
+#include "brick/request/request.hpp"
+#include "brick/response/response.hpp"
 
 namespace brick {
 
@@ -57,4 +56,3 @@ class Server {
 };
 }  // namespace brick
 
-#endif

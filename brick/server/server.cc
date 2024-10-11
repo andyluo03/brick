@@ -13,10 +13,8 @@
 #include <thread>
 #include <utility>
 
-#include "handler.hpp"
-#include "logger.hpp"
-#include "request.hpp"
-#include "response.hpp"
+#include "brick/request/request.hpp"
+#include "brick/response/response.hpp"
 
 #define MAX_REQUEST_SIZE (10 * 1024)  // 10KB, including null terminator
 
@@ -34,8 +32,6 @@ void Server::start(int port = 8080) {
     // threads should not receive SIGINT or SIGPIPE
     block_signals();
 
-    log::info("Running on port ", port, " with ", pool_.capacity(), " threads");
-
     // populate pool!
     for (size_t i = 0; i < pool_.capacity(); i++) {
         pool_.emplace_back(&Server::process_events, this);
@@ -52,7 +48,6 @@ void Server::start(int port = 8080) {
     while (serving_) {
         sigwait(&set, &sig);
         if (sig == SIGINT) {
-            log::info("Received SIGINT, stopping server...");
             serving_ = 0;
         }
     }
@@ -83,7 +78,6 @@ void Server::process_events() {
         nfds = epoll_wait(epoll_fd_, events, kMaxConnections, 1000);
         if (nfds < 0) {
             if (errno == EINTR) continue;
-            log::fatal("epoll_wait() failed: ", strerror(errno));
             exit(1);
         }
 
@@ -100,7 +94,6 @@ void Server::process_events() {
 void Server::accept_connection() const {
     int client_fd = accept(socket_fd_, nullptr, nullptr);
     if (client_fd < 0) {
-        log::error("Failed to accept connection: ", strerror(errno));
         return;
     }
 
@@ -111,19 +104,15 @@ void Server::accept_connection() const {
     ev.data.fd = client_fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev) < 0) {
-        log::error("Failed to add client to epoll: ", strerror(errno));
         remove_client(client_fd);
     }
 
-    log::debug("Thread ", std::this_thread::get_id(),
-               " accepted connection on fd ", client_fd);
 }
 
 void Server::handle_request(int client_fd) {
     char buf[MAX_REQUEST_SIZE];
     int size = recv(client_fd, buf, MAX_REQUEST_SIZE - 1, 0);
     if (size < 0) {
-        log::error("Failed to read from client: ", strerror(errno));
         remove_client(client_fd);
         return;
     }
@@ -141,20 +130,12 @@ void Server::handle_request(int client_fd) {
     if (router_.contains(method) && router_.at(method).contains(route)) {
         auto handler = router_.at(method).at(route);
         response = handler(request);
-        log::info("\"", request.method(), " ", request.route(), "\" ",
-                  response.status_code(), " ",
-                  Response::kStatusMessages.at(response.status_code()));
-    } else {
-        log::error("\"", request.method(), " ", request.route(), "\" ",
-                   response.status_code(), " ",
-                   Response::kStatusMessages.at(response.status_code()));
     }
 
     std::string ans = response.raw();
 
     // send response
     if (send(client_fd, ans.c_str(), ans.size(), 0) < 0) {
-        log::error("Failed to send response: ", strerror(errno));
     }
 
     remove_client(client_fd);
@@ -176,7 +157,6 @@ void Server::init_listener(int port) {
     // TODO(akhil): use nonblocking sockets instead
     socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd_ < 0) {
-        log::fatal("Failed to create socket: ", strerror(errno));
         exit(1);
     }
 
@@ -184,13 +164,11 @@ void Server::init_listener(int port) {
     int opt = 1;
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) <
         0) {
-        log::fatal("Failed to set socket options: ", strerror(errno));
         exit(1);
     }
     opt = 1;
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) <
         0) {
-        log::fatal("Failed to set socket options: ", strerror(errno));
         exit(1);
     }
 
@@ -204,19 +182,16 @@ void Server::init_listener(int port) {
     int status =
         getaddrinfo(nullptr, std::to_string(port).c_str(), &hints, &res);
     if (status != 0) {
-        log::fatal("Failed to get address info: ", gai_strerror(status));
         exit(1);
     }
 
     // bind socket
     if (bind(socket_fd_, res->ai_addr, res->ai_addrlen) < 0) {
-        log::fatal("Failed to bind socket: ", strerror(errno));
         exit(1);
     }
 
     // listen
     if (listen(socket_fd_, kMaxConnections) < 0) {
-        log::fatal("Failed to listen: ", strerror(errno));
         exit(1);
     }
 }
@@ -224,7 +199,6 @@ void Server::init_listener(int port) {
 void Server::init_epoll() {
     epoll_fd_ = epoll_create1(0);
     if (epoll_fd_ < 0) {
-        log::fatal("Failed to create epoll: ", strerror(errno));
         exit(1);
     }
 
@@ -233,7 +207,6 @@ void Server::init_epoll() {
     event.data.fd = socket_fd_;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_fd_, &event) < 0) {
-        log::fatal("Failed to add socket to epoll: ", strerror(errno));
         exit(1);
     }
 }
@@ -248,22 +221,17 @@ void Server::block_signals() {
 }
 
 void Server::cleanup() {
-    log::info("Cleaning up server...");
     for (std::thread& thread : pool_) {
         thread.join();
     }
-    // log::info("Cleaning up server...");
-    log::info("Successfully closed threads");
     shutdown(socket_fd_, SHUT_RDWR);
     close(socket_fd_);
     close(epoll_fd_);
-    log::info("Successfully shutdown server");
 }
 
 // Constructor and Destructor
 
 Server::Server(unsigned int num_threads) {
-    log::debug("Creating server with ", num_threads, " threads");
     pool_.reserve(num_threads);
 }
 
