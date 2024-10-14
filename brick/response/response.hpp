@@ -1,5 +1,4 @@
-#ifndef B_RESPONSE
-#define B_RESPONSE
+#pragma once
 
 #include <map>
 #include <string>
@@ -74,4 +73,3 @@ class Response {
 };
 
 }  // namespace brick
-#endif
